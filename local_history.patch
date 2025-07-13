@@ -1,0 +1,303 @@
+Index: venv/chartRenderer.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/venv/chartRenderer.py b/venv/chartRenderer.py
+--- a/venv/chartRenderer.py	
++++ b/venv/chartRenderer.py	(date 1752335136138)
+@@ -1,198 +1,147 @@
+ import pandas as pd
+ import altair as alt
+ 
+-# ─── 1) Modern-Minimal Dark Theme ────────────────────────────────────────────
+-def modern_minimal_dark_theme():
+-    return {
+-        "config": {
+-            # Seiten-Hintergrund
+-            "background": "#1E1E1E",
+-            # Panel-Hintergrund & Rahmen
+-            "view": {
+-                "fill": "#2B2B2B",       # dunkle Card-Farbe
+-                "stroke": "#3A3A3A",     # dezenter Rahmen
+-                "cornerRadius": 8,
+-                "strokeWidth": 1,
+-                "padding": 12
+-            },
+-            # Titel
+-            "title": {
+-                "font": "Open Sans",
+-                "fontSize": 18,
+-                "fontWeight": "bold",
+-                "color": "#EEEEEE",
+-                "anchor": "start"
+-            },
+-            # Achsen
+-            "axis": {
+-                "domain": False,
+-                "grid": False,
+-                "tickColor": "#888888",
+-                "tickSize": 4,
+-                "labelFont": "Open Sans",
+-                "labelFontSize": 10,
+-                "labelFontWeight": "bold",
+-                "labelColor": "#EEEEEE",
+-                "labelPadding": 8,
+-                "titleFont": "Open Sans",
+-                "titleFontSize": 12,
+-                "titleFontWeight": "bold",
+-                "titleColor": "#EEEEEE",
+-                "titlePadding": 12
+-            },
+-            # Legende
+-            "legend": {
+-                "orient": "bottom",
+-                "labelFont": "Open Sans",
+-                "labelFontSize": 10,
+-                "labelColor": "#EEEEEE",
+-                "titleFont": "Open Sans",
+-                "titleFontSize": 12,
+-                "titleColor": "#EEEEEE",
+-                "symbolType": "circle",
+-                "symbolSize": 60
+-            },
+-            # Tooltip
+-            "tooltip": {
+-                "font": "Open Sans",
+-                "fontSize": 11,
+-                "fontWeight": "normal"
+-            }
+-        }
+-    }
+-
+-# Registrieren & aktivieren
+-alt.themes.register("modern_minimal_dark", modern_minimal_dark_theme)
+-alt.themes.enable("modern_minimal_dark")
+-
+-
+ class ChartRenderer:
+     @staticmethod
+     def render_charts(times, sell, buy, marge):
+-        # ─── Datenaufbereitung ─────────────────────────────────────────────────
+         df = pd.DataFrame({
+-            'Zeit': pd.to_datetime(times),
++            'Zeit': times,
+             'Sell': sell,
+             'Buy': buy,
+             'Marge': marge
+         })
++
++        # Melt für Sell+Buy
+         df_sb = df.melt(
+             id_vars=['Zeit'],
+-            value_vars=['Sell','Buy'],
+-            var_name='Typ',
++            value_vars=['Sell', 'Buy'],
++            var_name='Metric',
+             value_name='Wert'
+         )
+-        df_m = df[['Zeit','Marge']]
++        df_m = df[['Zeit', 'Marge']]
+ 
+-        # ─── Farbpalette ───────────────────────────────────────────────────────
+-        palette = {
+-            'Buy':   '#66C2A5',  # helles Türkis
+-            'Sell':  '#FC8D62',  # helles Orange
+-            'Marge': '#8DA0CB'   # helles Violett
+-        }
++        # Interaktive Legendenselektion
++        legend_selection = alt.selection_point(fields=['Metric'], bind='legend')
+ 
+-        # ─── Interaktivität ────────────────────────────────────────────────────
+-        hover = alt.selection_single(
+-            on='mouseover', fields=['Zeit'], nearest=True, empty='none'
+-        )
++        # Brush für Zoom/Detailbereich
+         brush = alt.selection_interval(encodings=['x'])
+ 
+-        # ─── Übersicht Sell/Buy (Area + Brush) ─────────────────────────────────
++        # Übersicht Sell+Buy
+         overview_sb = (
+             alt.Chart(df_sb)
+-            .mark_area(interpolate='monotone', opacity=0.3)
++            .mark_area(opacity=0.3)
+             .encode(
+                 x=alt.X('Zeit:T', title=''),
+-                y=alt.Y('Wert:Q', title='Preis (Coins)'),
+-                color=alt.Color('Typ:N',
+-                    scale=alt.Scale(domain=['Buy','Sell'],
+-                                    range=[palette['Buy'], palette['Sell']]),
+-                    legend=None
+-                )
++                y=alt.Y('Wert:Q', title=''),
++                color=alt.Color('Metric:N', title='Typ')
+             )
+-            .properties(height=60)
++            .properties(width='container', height=80)
+             .add_selection(brush)
+         )
+ 
+-        # ─── Detail Sell/Buy (Linien + Hover) ──────────────────────────────────
+-        base_sb = alt.Chart(df).transform_filter(brush)
+-
+-        buy_line = base_sb.mark_line(strokeWidth=2).encode(
+-            x='Zeit:T', y='Buy:Q',
+-            color=alt.value(palette['Buy'])
++        # Detail Sell+Buy: zwei Linien aus dem Original-DF + gemeinsamer Tooltip
++        detail_sb = (
++            alt.Chart(df)
++            .transform_filter(brush)
+         )
+-        sell_line = base_sb.mark_line(strokeWidth=2).encode(
+-            x='Zeit:T', y='Sell:Q',
+-            color=alt.value(palette['Sell'])
++        # Buy-Linie
++        buy_line = detail_sb.mark_line().encode(
++            x='Zeit:T',
++            y=alt.Y('Buy:Q', title='Coins'),
++            color=alt.value('#1f77b4')  # oder deine Wunschfarbe
+         )
+-        buy_pts = base_sb.mark_circle(size=50).encode(
+-            x='Zeit:T', y='Buy:Q',
+-            opacity=alt.condition(hover, alt.value(1), alt.value(0)),
+-            tooltip=[
+-                alt.Tooltip('Zeit:T', title='Zeit', format='%Y-%m-%d %H:%M'),
+-                alt.Tooltip('Buy:Q',  title='Buy',  format=',')
+-            ]
++        # Sell-Linie
++        sell_line = detail_sb.mark_line().encode(
++            x='Zeit:T',
++            y=alt.Y('Sell:Q'),
++            color=alt.value('#d62728')
+         )
+-        sell_pts = base_sb.mark_circle(size=50).encode(
+-            x='Zeit:T', y='Sell:Q',
+-            opacity=alt.condition(hover, alt.value(1), alt.value(0)),
++
++        # Hover-Selektion
++        selector = alt.selection_single(on='mouseover', fields=['Zeit'], nearest=True, empty='none')
++        # Punkte nur beim Hover
++        buy_points = buy_line.mark_circle().encode(
++            opacity=alt.condition(selector, {"value": 1}, {"value": 0})
++        ).add_selection(selector)
++        sell_points = sell_line.mark_circle().encode(
++            opacity=alt.condition(selector, {"value": 1}, {"value": 0})
++        ).add_selection(selector)
++
++        # Rule + gemeinsamer Tooltip mit beiden Werten
++        rule = detail_sb.mark_rule(color='gray').encode(
++            x='Zeit:T',
+             tooltip=[
+-                alt.Tooltip('Zeit:T',  title='Zeit', format='%Y-%m-%d %H:%M'),
+-                alt.Tooltip('Sell:Q', title='Sell', format=',')
++                alt.Tooltip('Zeit:T', title='Zeit', format='%Y-%m-%d %H:%M'),
++                alt.Tooltip('Buy:Q', title='Buy Price', format=','),
++                alt.Tooltip('Sell:Q', title='Sell Price', format=',')
+             ]
++        ).transform_filter(selector)
++
++        chart_sb = (
++            alt.layer(buy_line, sell_line, buy_points, sell_points, rule)
++            .properties(width='container', height=300)
++            .resolve_scale(y='independent')
++            .interactive()
+         )
+ 
+-        detail_sb = alt.layer(
+-            buy_line, sell_line,
+-            buy_pts.add_selection(hover),
+-            sell_pts.add_selection(hover)
+-        ).properties(height=300)
++        # Selektor + Hover-Effekte
++        selector_sb = alt.selection_single(on='mouseover', fields=['Zeit'], nearest=True, empty='none')
++        points_sb = (
++            detail_sb
++            .mark_circle()
++            .encode(opacity=alt.condition(selector_sb, alt.value(1), alt.value(0)))
++            .add_selection(selector_sb)
++        )
++        rule_sb = (
++            detail_sb
++            .mark_rule(color='gray')
++            .encode(x='Zeit:T')
++            .transform_filter(selector_sb)
++        )
+ 
+-        # ─── Marge (Area + Line + Hover) ───────────────────────────────────────
++        # Übersicht Marge
+         overview_m = (
+             alt.Chart(df_m)
+-            .mark_area(interpolate='monotone',
+-                       color=palette['Marge'], opacity=0.2)
+-            .encode(
+-                x=alt.X('Zeit:T', title=''),
+-                y=alt.Y('Marge:Q', title='Marge (Coins)')
+-            )
+-            .properties(height=60)
++            .mark_area(color='green', opacity=0.3)
++            .encode(x='Zeit:T', y='Marge:Q')
++            .properties(width='container', height=80)
+             .add_selection(brush)
+         )
+ 
++        # Detail Marge
+         detail_m = (
+             alt.Chart(df_m)
+             .transform_filter(brush)
+-            .mark_line(strokeWidth=2, color=palette['Marge'])
++            .mark_line(point=True, color='green')
+             .encode(
+                 x='Zeit:T',
+                 y='Marge:Q',
+-                tooltip=[
+-                    alt.Tooltip('Zeit:T',  title='Zeit', format='%Y-%m-%d %H:%M'),
+-                    alt.Tooltip('Marge:Q', title='Marge', format=',')
+-                ]
++                tooltip=['Zeit:T', 'Marge:Q']
+             )
+-            .properties(height=300)
+-            .add_selection(hover)
++            .properties(width='container', height=300)
++            .interactive()
+         )
+ 
+-        # ─── Zusammenfügen ohne fixed width ────────────────────────────────────
+-        chart = (
++        selector_m = alt.selection_single(on='mouseover', fields=['Zeit'], nearest=True, empty='none')
++        points_m = (
++            detail_m
++            .mark_circle()
++            .encode(opacity=alt.condition(selector_m, alt.value(1), alt.value(0)))
++            .add_selection(selector_m)
++        )
++        rule_m = (
++            detail_m
++            .mark_rule(color='gray')
++            .encode(x='Zeit:T')
++            .transform_filter(selector_m)
++        )
++        chart_m = alt.layer(detail_m, points_m, rule_m).resolve_scale(y='independent')
++
++        # Gesamtes Layout kombinieren
++        return (
+             alt.vconcat(
+-                overview_sb & detail_sb,
+-                overview_m   & detail_m,
+-                spacing=30
+-            )
+-            .properties(
+-                title="Hypixel Bazaar Marktübersicht",
+-                description=(
+-                    "Dunkles Dashboard mit Preisverlauf (Buy/Sell) und Marge. "
+-                    "Hover zeigt exakte Werte. Auswahl per Brush."
+-                )
+-            )
+-            .configure_view(cornerRadius=8)
+-            .configure_title(fontSize=20, anchor='start', color='#EEEEEE')
++                alt.vconcat(overview_sb, chart_sb),
++                alt.vconcat(overview_m, chart_m),
++                spacing=20
++            ).resolve_scale(x='shared', y='independent')
+         )
+-
+-        return chart
