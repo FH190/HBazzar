@@ -1,6 +1,4 @@
 import streamlit as st
-import pandas as pd
-import altair as alt
 from statistics import mean, stdev
 
 from chartRenderer import ChartRenderer
