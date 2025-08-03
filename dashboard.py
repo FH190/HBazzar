@@ -2,6 +2,7 @@ import streamlit as st
 from statistics import mean, stdev
 
 from chartRenderer import ChartRenderer
+import streamlit.components.v1 as components
 
 from bazaar_api import BazaarAPI
 from time_parser import TimeParser
@@ -12,7 +13,10 @@ class Dashboard:
         self.api = api
         self.items = [
             "BOOSTER_COOKIE", "RECOMBOBULATOR_3000", "ENCHANTED_SEA_LUMIES",
-            "AGATHA_COUPON", "KISMET_FEATHER", "FIGSTONE", "SUMMONING_EYE"
+            "AGATHA_COUPON", "KISMET_FEATHER", "FIGSTONE", "SUMMONING_EYE",
+            "GOBLIN_EGG_BLUE","JUNGLE_KEY","BEJEWELED_HANDLE",
+            "ENCHANTMENT_LAPIDARY_1","ENCHANTMENT_LAPIDARY_5",
+            "PRECURSOR_APPARATUS","DIVAN_FRAGMENT","ENCHANTED_SUGAR"
         ]
 
     def render(self):

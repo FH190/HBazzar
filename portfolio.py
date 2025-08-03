@@ -92,7 +92,11 @@ class Portfolio:
         # --- Kauf-Formular ---
         with st.form("portfolio_form", clear_on_submit=True):
             cols = st.columns([3, 1, 1, 1])
-            item  = cols[0].selectbox("Item:", ["BOOSTER_COOKIE", "RECOMBOBULATOR_3000"], key="port_item")
+            item  = cols[0].selectbox("Item:", ["BOOSTER_COOKIE", "RECOMBOBULATOR_3000", "ENCHANTED_SEA_LUMIES",
+            "AGATHA_COUPON", "KISMET_FEATHER", "FIGSTONE", "SUMMONING_EYE",
+            "GOBLIN_EGG_BLUE","JUNGLE_KEY","BEJEWELED_HANDLE",
+            "ENCHANTMENT_LAPIDARY_1","ENCHANTMENT_LAPIDARY_5",
+            "PRECURSOR_APPARATUS","DIVAN_FRAGMENT"], key="port_item")
             qty   = cols[1].number_input(
                         "Menge:",
                         min_value=0.0,
